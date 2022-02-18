@@ -4,6 +4,7 @@ from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 import requests
 from bs4 import BeautifulSoup
+import concurrent.futures
 
 driver = webdriver.Chrome(ChromeDriverManager().install())
 
@@ -29,15 +30,29 @@ def list_books_from_wishlist(link):
 
 
 def find_amazon_link(book_link):
-    resp=requests.get(book_link)
-    soup=BeautifulSoup(resp.content,"html.parser")
-    main=soup.find('a',class_="buttonBar")
-    return "https://www.goodreads.com"+main.attrs['href']
+    for i in range(5):
+        try:
+            resp=requests.get(book_link)
+            soup=BeautifulSoup(resp.content,"html.parser")
+            main=soup.find('a',class_="buttonBar")
+            return "https://www.goodreads.com"+main.attrs['href']
+        except Exception as e:
+            print(e)
+            print(i,"Didn't Work...\n\n")
+            continue
+    else:
+        print(book_link, i, "Not working at all........................\n\n\n")
 
 
-final = list_books_from_wishlist("https://www.goodreads.com/review/list/29695889-shreyas?ref=nav_mybooks&shelf=to-read")
-for l in final:
-    print("Book Link:",l)
-    print("Amazon Link:", find_amazon_link(l))
+# final = list_books_from_wishlist("https://www.goodreads.com/review/list/29695889-shreyas?ref=nav_mybooks&shelf=to-read")
+with open("data.txt", "r") as f:
+    final = json.loads(f.read())
+with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+    result = executor.map(find_amazon_link, final)
+print(list(result))
+# for l in final:
+#     print("\n\n\nBook Link:",l)
+#     print("Amazon Link:", find_amazon_link(l))
+
 # with open("data.txt", "w") as f:
 #     f.write(json.dumps(final))
